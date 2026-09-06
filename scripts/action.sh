@@ -43,13 +43,20 @@ DEF_MAX="144"
 DEF_TOUCH="1"
 DEF_REQ="0"
 
-BIN="$MODDIR/bin/whitelist_updater"
-if [ ! -x "$BIN" ]; then
-  echo "[shade144] binary not found: $BIN" | tee -a "$LOG"
-  echo "Expected: \$MODDIR/bin/whitelist_updater" | tee -a "$LOG"
+# Pick binary by device ABI (multi-arch layout), fall back to legacy single binary.
+ABI="$(getprop ro.product.cpu.abi 2>/dev/null)"
+BIN=""
+if [ -n "$ABI" ] && [ -x "$MODDIR/bin/$ABI/whitelist_updater" ]; then
+  BIN="$MODDIR/bin/$ABI/whitelist_updater"
+elif [ -x "$MODDIR/bin/whitelist_updater" ]; then
+  BIN="$MODDIR/bin/whitelist_updater"
+fi
+if [ -z "$BIN" ]; then
+  echo "[shade144] binary not found for ABI '${ABI:-unknown}'" | tee -a "$LOG"
+  echo "Expected: \$MODDIR/bin/<abi>/whitelist_updater or \$MODDIR/bin/whitelist_updater" | tee -a "$LOG"
   echo "Reason: binary not built or not packed into module.zip" | tee -a "$LOG"
   echo "Fix: build separately then re-pack:" | tee -a "$LOG"
-  echo "  make -C src  # or cmake -S src -B build && cmake --build build (NDK arm64)" | tee -a "$LOG"
+  echo "  ./scripts/compile.sh  # needs NDK (all ABIs)" | tee -a "$LOG"
   echo "  ./scripts/release.sh" | tee -a "$LOG"
   echo "  reflash zip" | tee -a "$LOG"
   exit 2

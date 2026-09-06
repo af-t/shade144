@@ -1,0 +1,88 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  # Runs on every push/PR: host build (cmake + make) and unit tests.
+  # Release is gated on this job -> tag release only ships if tests pass.
+  test:
+    name: test (host)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: cmake build + ctest
+        run: |
+          cmake -S src -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build
+          ctest --test-dir build --output-on-failure
+
+      - name: make build + test
+        run: |
+          make -C src clean
+          make -C src
+          make -C src test
+
+  # Runs only on version tags: cross-compile one ABI per matrix leg (NDK clang, API 35).
+  compile:
+    name: compile (${{ matrix.abi }})
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    strategy:
+      matrix:
+        abi: [armeabi-v7a, arm64-v8a, x86, x86_64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: setup NDK
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r27
+
+      - name: compile ${{ matrix.abi }}
+        run: ./scripts/compile.sh ${{ matrix.abi }}
+
+      - name: upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: bin-${{ matrix.abi }}
+          path: build/${{ matrix.abi }}/whitelist_updater
+
+  # Runs only on version tags, after test AND compile succeed.
+  release:
+    name: release
+    runs-on: ubuntu-latest
+    needs: [test, compile]
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: download ABI binaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: bin-*
+          path: build-dl
+
+      - name: arrange per-ABI layout
+        run: |
+          for abi in armeabi-v7a arm64-v8a x86 x86_64; do
+            mkdir -p "build/$abi"
+            mv "build-dl/bin-$abi/whitelist_updater" "build/$abi/whitelist_updater"
+          done
+          ls -l build/*/whitelist_updater
+
+      - name: pack module zip
+        run: ./scripts/release.sh "shade144-${GITHUB_REF_NAME}.zip"
+
+      - name: publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip

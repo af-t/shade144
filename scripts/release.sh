@@ -30,35 +30,64 @@ if [[ "$OUT_PATH" != /* ]]; then
   OUT_PATH="$ROOT/$OUT_PATH"
 fi
 
-# Binary check - must be prebuilt separately
-BIN_HOST="src/whitelist_updater"
-BIN_STAGED="bin/whitelist_updater"
+# Binaries: prefer multi-arch output from scripts/compile.sh, else legacy single binary.
+#   Multi-arch: $BUILD_DIR/<abi>/whitelist_updater (abi = armeabi-v7a, arm64-v8a, x86, x86_64)
+#               or env per ABI: BIN_ARMEABI_V7A, BIN_ARM64_V8A, BIN_X86, BIN_X86_64
+#   Legacy:     $BIN_PATH, src/whitelist_updater, build/whitelist_updater -> bin/whitelist_updater
+BUILD_DIR="${BUILD_DIR:-build}"
+ARCH_ABIS="armeabi-v7a arm64-v8a x86 x86_64"
+
+bin_for_abi() {
+  local abi="$1" p=""
+  case "$abi" in
+    armeabi-v7a) p="${BIN_ARMEABI_V7A:-}" ;;
+    arm64-v8a)   p="${BIN_ARM64_V8A:-}" ;;
+    x86)         p="${BIN_X86:-}" ;;
+    x86_64)      p="${BIN_X86_64:-}" ;;
+  esac
+  if [[ -n "$p" && -f "$p" ]]; then echo "$p"; return 0; fi
+  if [[ -f "$BUILD_DIR/$abi/whitelist_updater" ]]; then echo "$BUILD_DIR/$abi/whitelist_updater"; return 0; fi
+  return 1
+}
+
+ARCH_FOUND=""
+for ABI in $ARCH_ABIS; do
+  if B="$(bin_for_abi "$ABI")"; then
+    ARCH_FOUND="$ARCH_FOUND $ABI:$B"
+  fi
+done
+
 BIN_FOUND=""
+if [[ -z "$ARCH_FOUND" ]]; then
+  BIN_HOST="src/whitelist_updater"
+  # Prefer prebuilt arch-specific if provided via env, else host binary
+  if [[ -n "${BIN_PATH:-}" && -f "$BIN_PATH" ]]; then
+    BIN_FOUND="$BIN_PATH"
+  elif [[ -f "$BIN_HOST" ]]; then
+    BIN_FOUND="$BIN_HOST"
+  elif [[ -f "build/whitelist_updater" ]]; then
+    BIN_FOUND="build/whitelist_updater"
+  fi
 
-# Prefer prebuilt arch-specific if provided via env, else host binary
-if [[ -n "${BIN_PATH:-}" && -f "$BIN_PATH" ]]; then
-  BIN_FOUND="$BIN_PATH"
-elif [[ -f "$BIN_HOST" ]]; then
-  BIN_FOUND="$BIN_HOST"
-elif [[ -f "build/whitelist_updater" ]]; then
-  BIN_FOUND="build/whitelist_updater"
-fi
-
-if [[ -z "$BIN_FOUND" ]]; then
-  echo "error: binary not found - build separately first" >&2
-  echo "  make -C src" >&2
-  echo "  or: cmake -S src -B build && cmake --build build" >&2
-  echo "  then: BIN_PATH=build/whitelist_updater $0" >&2
-  exit 2
+  if [[ -z "$BIN_FOUND" ]]; then
+    echo "error: binary not found - build separately first" >&2
+    echo "  ./scripts/compile.sh          # Android ABIs via NDK (needs ANDROID_NDK_HOME)" >&2
+    echo "  make -C src                   # host binary (dev/test only)" >&2
+    echo "  or: cmake -S src -B build && cmake --build build" >&2
+    echo "  then: BIN_PATH=build/whitelist_updater $0" >&2
+    exit 2
+  fi
 fi
 
 # Use file to warn if host arch vs android
 if command -v file >/dev/null 2>&1; then
-  echo "binary: $BIN_FOUND ($(file -b "$BIN_FOUND" | cut -d, -f1))"
-  if file -b "$BIN_FOUND" | grep -qi "x86-64"; then
-    echo "warn: host binary x86-64 detected - device needs arm64 (cross-compile with NDK)" >&2
-    echo "  example: \$NDK/build/cmake/android.toolchain.cmake -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-24" >&2
-  fi
+  for entry in ${ARCH_FOUND:-"host:$BIN_FOUND"}; do
+    B="${entry#*:}"
+    echo "binary: $B ($(file -b "$B" | cut -d, -f1))"
+    if file -b "$B" | grep -qi "x86-64"; then
+      echo "warn: host binary x86-64 detected - device needs arm64 (run ./scripts/compile.sh with NDK)" >&2
+    fi
+  done
 fi
 
 STAGE="$(mktemp -d)"
@@ -92,10 +121,20 @@ if [[ -d system ]]; then
   cp -a system "$STAGE/system"
 fi
 
-# Binary (single copy - bin/whitelist_updater only)
+# Binaries: multi-arch (bin/<abi>/) or legacy single copy (bin/whitelist_updater)
 mkdir -p "$STAGE/bin"
-cp -a "$BIN_FOUND" "$STAGE/$BIN_STAGED"
-chmod 755 "$STAGE/$BIN_STAGED"
+if [[ -n "$ARCH_FOUND" ]]; then
+  for entry in $ARCH_FOUND; do
+    ABI="${entry%%:*}"
+    B="${entry#*:}"
+    mkdir -p "$STAGE/bin/$ABI"
+    cp -a "$B" "$STAGE/bin/$ABI/whitelist_updater"
+    chmod 755 "$STAGE/bin/$ABI/whitelist_updater"
+  done
+else
+  cp -a "$BIN_FOUND" "$STAGE/bin/whitelist_updater"
+  chmod 755 "$STAGE/bin/whitelist_updater"
+fi
 
 # Sanity checks
 echo "--- stage contents ---"
