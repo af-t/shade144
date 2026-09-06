@@ -1,0 +1,24 @@
+# Build artifacts
+src/whitelist_updater
+src/whitelist_test
+src/build/
+build/
+*.o
+*.a
+
+# Scratch prototype (outside repo, but ignore if accidentally created)
+node_modules/
+package.json
+package-lock.json
+bun.lockb
+prototype/
+scratch/
+
+# Release
+dist/
+
+# Temp
+/data/
+/tmp/
+*.bak
+*.log

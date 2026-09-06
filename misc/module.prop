@@ -1,0 +1,6 @@
+id=shade144
+name=Shade144 XOS16
+author=wantrelax | wantnpc
+version=v1.0.0
+versionCode=101
+description=Magellan dex patch: shade intercept (d.F) + transition-animating (d.s) return 144 mode instead of 90. Idle to 60 preserved. Unlock 144 for more apps.
