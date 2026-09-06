@@ -22,7 +22,7 @@ add_executable(whitelist_updater
     main.cpp
 )
 
-# For Android cross-compile: cmake -DCMAKE_TOOLCHAIN_FILE=$NDK/build/cmake/android.toolchain.cmake -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-24 ..
+# For Android cross-compile: cmake -DCMAKE_TOOLCHAIN_FILE=$NDK/build/cmake/android.toolchain.cmake -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-35 ..
 # No external deps - pure stdlib
 
 enable_testing()

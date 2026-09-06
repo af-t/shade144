@@ -3,23 +3,29 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <stdexcept>
 
 static std::string readFile(const std::string& p) {
     std::ifstream f(p);
+    if (!f) throw std::runtime_error("cannot open: " + p);
     std::ostringstream ss; ss << f.rdbuf(); return ss.str();
 }
 
 int main() {
-    const std::string xmlPath = "system/tr_product/etc/vconfig/magellan/refresh_rate_config.xml";
-    // try relative to repo root and to build dir
+    // Resolve XML relative to cwd: repo root, src/ (make test), or build/ (ctest).
+    static const char* candidates[] = {
+        "system/tr_product/etc/vconfig/magellan/refresh_rate_config.xml",
+        "../system/tr_product/etc/vconfig/magellan/refresh_rate_config.xml",
+    };
     std::string xml;
-    try { xml = readFile(xmlPath); }
-    catch(...) { xml = readFile("../system/tr_product/etc/vconfig/magellan/refresh_rate_config.xml"); }
-    if (xml.empty()) {
-        // fallback to absolute path for CI
-        xml = readFile("/home/claude/projects/shade144/system/tr_product/etc/vconfig/magellan/refresh_rate_config.xml");
+    for (const char* c : candidates) {
+        try { xml = readFile(c); break; }
+        catch (const std::exception&) {}
     }
-    assert(!xml.empty() && "failed to load xml");
+    if (xml.empty()) {
+        std::cerr << "failed to load refresh_rate_config.xml\n";
+        return 1;
+    }
 
     // test defaults exact
     WhitelistDefaults d;
