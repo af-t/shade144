@@ -330,12 +330,10 @@ defineExpose({
   </main>
 
   <section class="floating-content" :class="{ 'fab-hide': fabHidden }">
-    <div class="fab-container">
-      <button class="fab" :disabled="saving || loading" @click="save">
-        <i class="mat">edit_note</i>
-        {{ saving ? 'Saving…' : 'Save' }}
-      </button>
-    </div>
+    <button class="fab" :disabled="saving || loading" @click="save">
+      <i class="mat">edit_note</i>
+      {{ saving ? 'Saving…' : 'Save' }}
+    </button>
   </section>
 
   <div v-if="menuOpen" class="menu-scrim" @click="menuOpen = false"></div>
@@ -356,92 +354,94 @@ defineExpose({
 
   <div v-if="editing" class="scrim" @click="closeEditor()"></div>
   <div v-if="editing" class="sheet" role="dialog" aria-modal="true" aria-label="App settings">
-    <header class="sheet-head">
-      <AppIcon
-        :pkg="editing.package"
-        :label="editing.label"
-        :src="editing.icon"
-        :version="editing.versionCode"
-        :module-dir="dir"
-        eager
-      />
-      <div class="smet">
-        <strong>{{ editing.label }}</strong>
-        <span class="package-name">{{ editing.package }}</span>
-      </div>
-      <button class="btn-icon" aria-label="Close" @click="closeEditor()">
-        <i class="mat">close</i>
-      </button>
-    </header>
-
-    <div class="drow">
-      <div class="dmeta">
-        <strong>Enabled</strong>
-        <div class="dim">Included in the 144&nbsp;Hz whitelist</div>
-      </div>
-      <button
-        class="sw"
-        :class="{ on: editing.enabled }"
-        role="switch"
-        :aria-checked="editing.enabled"
-        @click="toggle(editing)"
-      >
-        <span class="knob" />
-      </button>
-    </div>
-
-    <div class="divider"></div>
-
-    <label v-for="k in ['auto', 'high', 'max']" :key="k" class="rate-row">
-      <span class="rate-label">{{ k }}</span>
-      <span class="seg">
-        <button
-          v-for="v in RATE_VALUES"
-          :key="v"
-          class="seg-opt"
-          :class="{ on: editing.values[k] === v }"
-          :aria-pressed="editing.values[k] === v"
-          @click="setValue(editing, k, v)"
-        >
-          {{ v }}
+    <div class="sheet-body">
+      <header class="sheet-head">
+        <AppIcon
+          :pkg="editing.package"
+          :label="editing.label"
+          :src="editing.icon"
+          :version="editing.versionCode"
+          :module-dir="dir"
+          eager
+        />
+        <div class="smet">
+          <strong>{{ editing.label }}</strong>
+          <span class="package-name">{{ editing.package }}</span>
+        </div>
+        <button class="btn-icon" aria-label="Close" @click="closeEditor()">
+          <i class="mat">close</i>
         </button>
-      </span>
-    </label>
+      </header>
 
-    <div class="divider"></div>
-
-    <div class="drow">
-      <div class="dmeta">
-        <strong>Touch boost</strong>
-        <div class="dim">Keep peak rate while touching</div>
+      <div class="drow">
+        <div class="dmeta">
+          <strong>Enabled</strong>
+          <div class="dim">Included in the 144&nbsp;Hz whitelist</div>
+        </div>
+        <button
+          class="sw"
+          :class="{ on: editing.enabled }"
+          role="switch"
+          :aria-checked="editing.enabled"
+          @click="toggle(editing)"
+        >
+          <span class="knob" />
+        </button>
       </div>
-      <button
-        class="sw"
-        :class="{ on: editing.values.touch === '1' }"
-        role="switch"
-        :aria-checked="editing.values.touch === '1'"
-        @click="setValue(editing, 'touch', editing.values.touch === '1' ? '0' : '1')"
-      >
-        <span class="knob" />
-      </button>
-    </div>
 
-    <div class="drow">
-      <div class="dmeta">
-        <strong>App request</strong>
-        <div class="dim">Honor per-app rate requests</div>
+      <div class="divider"></div>
+
+      <label v-for="k in ['auto', 'high', 'max']" :key="k" class="rate-row">
+        <span class="rate-label">{{ k }}</span>
+        <span class="seg">
+          <button
+            v-for="v in RATE_VALUES"
+            :key="v"
+            class="seg-opt"
+            :class="{ on: editing.values[k] === v }"
+            :aria-pressed="editing.values[k] === v"
+            @click="setValue(editing, k, v)"
+          >
+            {{ v }}
+          </button>
+        </span>
+      </label>
+
+      <div class="divider"></div>
+
+      <div class="drow">
+        <div class="dmeta">
+          <strong>Touch boost</strong>
+          <div class="dim">Keep peak rate while touching</div>
+        </div>
+        <button
+          class="sw"
+          :class="{ on: editing.values.touch === '1' }"
+          role="switch"
+          :aria-checked="editing.values.touch === '1'"
+          @click="setValue(editing, 'touch', editing.values.touch === '1' ? '0' : '1')"
+        >
+          <span class="knob" />
+        </button>
       </div>
-      <button
-        class="sw"
-        :class="{ on: editing.values.app_request === '1' }"
-        role="switch"
-        :aria-checked="editing.values.app_request === '1'"
-        @click="
-          setValue(editing, 'app_request', editing.values.app_request === '1' ? '0' : '1')
-        "
-      >
-        <span class="knob" />
-      </button>
+
+      <div class="drow">
+        <div class="dmeta">
+          <strong>App request</strong>
+          <div class="dim">Honor per-app rate requests</div>
+        </div>
+        <button
+          class="sw"
+          :class="{ on: editing.values.app_request === '1' }"
+          role="switch"
+          :aria-checked="editing.values.app_request === '1'"
+          @click="
+            setValue(editing, 'app_request', editing.values.app_request === '1' ? '0' : '1')
+          "
+        >
+          <span class="knob" />
+        </button>
+      </div>
     </div>
 
     <button class="done" @click="closeEditor()">Done</button>
