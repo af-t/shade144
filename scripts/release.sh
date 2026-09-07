@@ -103,9 +103,16 @@ if [[ -f misc/system.prop ]]; then
 fi
 if [[ -f scripts/action.sh ]]; then
   cp -a scripts/action.sh "$STAGE/action.sh"
-  chmod 755 "$STAGE/action.sh"
+  chmod 644 "$STAGE/action.sh"
 else
   echo "error: scripts/action.sh not found" >&2
+  exit 1
+fi
+if [[ -f scripts/customize.sh ]]; then
+  cp -a scripts/customize.sh "$STAGE/customize.sh"
+  chmod 644 "$STAGE/customize.sh"
+else
+  echo "error: scripts/customize.sh not found" >&2
   exit 1
 fi
 
