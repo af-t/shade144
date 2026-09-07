@@ -44,6 +44,7 @@ export async function installedPackages() {
       label: meta?.appLabel || name,
       isSystem: meta?.isSystem ?? false,
       icon: `ksu://icon/${name}`,
+      versionCode: meta?.versionCode ?? 0,
     };
   });
 }

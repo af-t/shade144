@@ -1,7 +1,10 @@
 <script setup>
-import { toast } from 'kernelsu';
+import { enableEdgeToEdge, exec, toast } from 'kernelsu';
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
+import AppIcon from './components/AppIcon.vue';
 import { serializeConfig } from './lib/config';
+import { flushDiskWrites, iconFileName, primeDiskCache, syncDiskCache } from './lib/diskIconCache';
+import { formatIconStats } from './lib/iconStats';
 import {
   DEFAULT_MODULE_DIR,
   getModuleDir,
@@ -71,6 +74,7 @@ async function bootstrap() {
     manager.value = await loadManager();
     dir.value = getModuleDir();
     const installed = await installedPackages();
+    await primeDiskCache(dir.value, exec);
     let cfg;
     try {
       cfg = await readConfig(dir.value);
@@ -87,11 +91,16 @@ async function bootstrap() {
         label: p.label,
         isSystem: p.isSystem,
         icon: p.icon,
-        iconError: false,
+        versionCode: p.versionCode ?? 0,
         enabled: !!existing,
         values: applyDefaults(existing ? { ...existing } : { package: p.package }),
       };
     });
+    void syncDiskCache(
+      dir.value,
+      new Set(installed.map((p) => iconFileName(p.package, p.versionCode))),
+      exec,
+    );
   } catch (e) {
     error.value = e.message;
   } finally {
@@ -112,11 +121,6 @@ function isChanged(row) {
 
 function toggle(row) {
   row.enabled = !row.enabled;
-}
-
-function onIconError(e, row) {
-  if (!e.currentTarget.src.startsWith('ksu://')) return;
-  row.iconError = true;
 }
 
 function openEditor(row) {
@@ -143,6 +147,13 @@ function closeSearch() {
 function setFilter(v) {
   filter.value = v;
   menuOpen.value = false;
+}
+
+const menuStats = ref('');
+
+function toggleMenu() {
+  menuOpen.value = !menuOpen.value;
+  if (menuOpen.value) menuStats.value = formatIconStats();
 }
 
 function onScroll() {
@@ -194,13 +205,36 @@ function preview() {
   return serializeConfig({ items, prefix: '', suffix: '' });
 }
 
+let flushTimer = null;
+
+function onHide() {
+  if (document.visibilityState === 'hidden') void flushDiskWrites();
+}
+
+function onPageHide() {
+  void flushDiskWrites();
+}
+
 onMounted(() => {
+  try {
+    enableEdgeToEdge(true);
+  } catch {}
   bootstrap();
   window.addEventListener('scroll', onScroll, { passive: true });
+  document.addEventListener('visibilitychange', onHide);
+  window.addEventListener('pagehide', onPageHide);
+  flushTimer = setInterval(() => {
+    void flushDiskWrites();
+  }, 5000);
 });
 
 onUnmounted(() => {
   window.removeEventListener('scroll', onScroll);
+  document.removeEventListener('visibilitychange', onHide);
+  window.removeEventListener('pagehide', onPageHide);
+  if (flushTimer) clearInterval(flushTimer);
+  flushTimer = null;
+  void flushDiskWrites();
 });
 
 defineExpose({
@@ -246,7 +280,7 @@ defineExpose({
     >
       <i class="mat">search</i>
     </button>
-    <button class="btn-icon" aria-label="Menu" @click="menuOpen = !menuOpen">
+    <button class="btn-icon" aria-label="Menu" @click="toggleMenu">
       <i class="mat">more_vert</i>
     </button>
   </header>
@@ -267,18 +301,13 @@ defineExpose({
       >
         <div class="content">
           <button class="card-main" @click="toggle(row)" @contextmenu.prevent="openEditor(row)">
-            <span class="app-icon-container">
-              <img
-                v-if="row.icon && !row.iconError"
-                :src="row.icon"
-                :alt="row.label"
-                draggable="false"
-                @error="onIconError($event, row)"
-              />
-              <span v-if="row.iconError" class="app-icon-fallback visible">
-                <i class="mat">android</i>
-              </span>
-            </span>
+            <AppIcon
+              :pkg="row.package"
+              :label="row.label"
+              :src="row.icon"
+              :version="row.versionCode"
+              :module-dir="dir"
+            />
             <span class="app-info">
               <span class="app-name">{{ row.label }}</span>
               <span class="package-name">{{ row.package }}</span>
@@ -322,14 +351,20 @@ defineExpose({
       <i class="mat">check</i>
       <span class="menu-label">{{ f.label }}</span>
     </button>
+    <p v-if="menuStats" class="menu-foot">icons · {{ menuStats }}</p>
   </div>
 
   <div v-if="editing" class="scrim" @click="closeEditor()"></div>
   <div v-if="editing" class="sheet" role="dialog" aria-modal="true" aria-label="App settings">
     <header class="sheet-head">
-      <span class="app-icon-container">
-        <img v-if="editing.icon" :src="editing.icon" :alt="editing.label" class="sicon-img" />
-      </span>
+      <AppIcon
+        :pkg="editing.package"
+        :label="editing.label"
+        :src="editing.icon"
+        :version="editing.versionCode"
+        :module-dir="dir"
+        eager
+      />
       <div class="smet">
         <strong>{{ editing.label }}</strong>
         <span class="package-name">{{ editing.package }}</span>

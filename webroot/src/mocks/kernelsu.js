@@ -11,20 +11,19 @@ const stored = () => {
 const persist = (state) => {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch {
-    // storage unavailable, keep in-memory
-  }
+  } catch {}
 };
 
 const store = stored();
 
+const disk = new Map();
+
 export function reset() {
   for (const k of Object.keys(store)) delete store[k];
+  disk.clear();
   try {
     localStorage.removeItem(STORAGE_KEY);
-  } catch {
-    // storage unavailable
-  }
+  } catch {}
 }
 
 export function exec(command) {
@@ -56,6 +55,43 @@ export function exec(command) {
     }
     if (trimmed === 'ls /data/adb') {
       resolve({ errno: 0, stdout: 'ksu\nmodules\nbusybox\n', stderr: '' });
+      return;
+    }
+    const ls1 = trimmed.match(/^ls -1 '([^']+)'/);
+    if (ls1) {
+      const dir = ls1[1];
+      const names = [...disk.keys()]
+        .filter((p) => p.startsWith(`${dir}/`))
+        .map((p) => p.slice(dir.length + 1));
+      resolve({ errno: 0, stdout: names.join('\n'), stderr: '' });
+      return;
+    }
+    const b64read = trimmed.match(/^base64 '([^']+)'/);
+    if (b64read) {
+      const body = disk.get(b64read[1]);
+      if (body === undefined) {
+        resolve({ errno: 1, stdout: '', stderr: `base64: ${b64read[1]}: No such file` });
+        return;
+      }
+      resolve({ errno: 0, stdout: body, stderr: '' });
+      return;
+    }
+    if (trimmed.includes("printf '%s'") && trimmed.includes('base64 -d >')) {
+      for (const m of trimmed.matchAll(
+        /printf '%s' '([A-Za-z0-9+/=]+)' \| base64 -d > '([^']+)'/g,
+      )) {
+        disk.set(m[2], m[1]);
+      }
+      resolve({ errno: 0, stdout: '', stderr: '' });
+      return;
+    }
+    if (trimmed.startsWith('rm -f ')) {
+      for (const m of trimmed.matchAll(/'([^']+)'/g)) disk.delete(m[1]);
+      resolve({ errno: 0, stdout: '', stderr: '' });
+      return;
+    }
+    if (trimmed.startsWith('mkdir -p ')) {
+      resolve({ errno: 0, stdout: '', stderr: '' });
       return;
     }
     resolve({ errno: 0, stdout: '', stderr: '' });
@@ -94,6 +130,25 @@ export function getPackagesInfo(packages) {
     if (!p) return { packageName: name, appLabel: '', isSystem: false, uid: 0 };
     return { ...p, versionName: '10.0.0', versionCode: 10000 };
   });
+}
+
+export function cacheAllPackageIcons(_size) {}
+
+export function getPackagesIcons(packagesJson, _size) {
+  const wanted = typeof packagesJson === 'string' ? JSON.parse(packagesJson) : packagesJson;
+  const byName = new Map(PACKAGES.map((p) => [p.packageName, p]));
+  return JSON.stringify(
+    wanted.map((name) => {
+      const p = byName.get(name);
+      if (!p) return { packageName: name, icon: '' };
+      const svg =
+        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">` +
+        `<rect width="48" height="48" fill="#333"/>` +
+        `<text x="24" y="31" font-family="sans-serif" font-size="22" ` +
+        `fill="#fff" text-anchor="middle">${(p.appLabel || name)[0]}</text></svg>`;
+      return { packageName: name, icon: `data:image/svg+xml;utf8,${encodeURIComponent(svg)}` };
+    }),
+  );
 }
 
 export function toast(message) {
@@ -141,6 +196,6 @@ function installIconFallback() {
 }
 
 if (typeof window !== 'undefined') {
-  window.__ksuMock = { reset, listPackages, getPackagesInfo };
+  window.__ksuMock = { reset, listPackages, getPackagesInfo, disk };
   installIconFallback();
 }

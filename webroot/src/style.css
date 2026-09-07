@@ -1,5 +1,8 @@
+@import "https://mui.kernelsu.org/internal/insets.css";
+
 * {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 @font-face {
@@ -30,8 +33,9 @@
 }
 
 :root {
-  --top-inset: env(safe-area-inset-top, 0px);
-  --bottom-inset: env(safe-area-inset-bottom, 0px);
+  color-scheme: dark;
+  --top-inset: var(--window-inset-top, env(safe-area-inset-top, 0px));
+  --bottom-inset: var(--window-inset-bottom, env(safe-area-inset-bottom, 0px));
 
   --md-sys-color-primary: #7ad15a;
   --md-sys-color-on-primary: #081406;
@@ -70,6 +74,7 @@ body {
   color: var(--md-sys-color-on-surface);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   font-size: 16px;
+  -webkit-touch-callout: none;
 }
 
 body.locked {
@@ -257,10 +262,31 @@ button {
     border-radius 0.2s ease,
     background-color 0.1s ease;
   user-select: none;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 72px;
 }
 
 .app:active {
   border-radius: var(--radius-group);
+}
+
+.app::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.16) 0%, transparent 65%);
+  opacity: 0;
+  transform: scale(0.5);
+  transition:
+    opacity 0.25s ease,
+    transform 0.45s ease;
+  pointer-events: none;
+}
+
+.app:active::after {
+  opacity: 1;
+  transform: scale(1.5);
 }
 
 .app.selected {
@@ -318,6 +344,26 @@ button {
   background-color: var(--md-sys-color-secondary-container);
   justify-content: center;
   align-items: center;
+}
+
+.app-icon-placeholder {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  background-color: var(--md-sys-color-secondary-container);
+  opacity: 0.45;
+  animation: icon-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes icon-pulse {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.6;
+  }
 }
 
 .app-icon-fallback.visible {
@@ -480,6 +526,14 @@ button {
   font-weight: 500;
   letter-spacing: 0.5px;
   text-transform: uppercase;
+  user-select: none;
+}
+
+.menu-foot {
+  margin: 0;
+  padding: 8px 12px 6px;
+  color: var(--md-sys-color-outline);
+  font-size: 11px;
   user-select: none;
 }
 
@@ -674,4 +728,12 @@ button {
 .seg-opt.on {
   background: var(--md-sys-color-primary-container);
   color: var(--md-sys-color-on-primary-container);
+}
+
+@media (hover: none) {
+  .btn-icon:hover,
+  .status:hover,
+  .menu-item:hover {
+    background: transparent;
+  }
 }

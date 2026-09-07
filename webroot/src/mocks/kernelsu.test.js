@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
+  cacheAllPackageIcons,
   enableEdgeToEdge,
   exec,
   exit,
   fullScreen,
+  getPackagesIcons,
   getPackagesInfo,
   listPackages,
   moduleInfo,
@@ -64,6 +66,23 @@ describe('exec', () => {
     const res = await exec('ls /data/adb');
     expect(res.stdout).toContain('ksu');
   });
+
+  it('round-trips icon files under the module disk cache', async () => {
+    const dir = '/data/adb/modules/shade144/.cache/icons';
+    const w = await exec(
+      `mkdir -p '${dir}' && printf '%s' 'QUJD' | base64 -d > '${dir}/com.a@1.png'`,
+    );
+    expect(w.errno).toBe(0);
+    const ls = await exec(`ls -1 '${dir}' 2>/dev/null`);
+    expect(ls.stdout).toContain('com.a@1.png');
+    const r = await exec(`base64 '${dir}/com.a@1.png' 2>/dev/null | tr -d '\\n'`);
+    expect(r.errno).toBe(0);
+    expect(r.stdout).toBe('QUJD');
+    const rm = await exec(`rm -f '${dir}/com.a@1.png'`);
+    expect(rm.errno).toBe(0);
+    const miss = await exec(`base64 '${dir}/com.a@1.png' 2>/dev/null | tr -d '\\n'`);
+    expect(miss.errno).toBe(1);
+  });
 });
 
 describe('listPackages', () => {
@@ -92,6 +111,18 @@ describe('getPackagesInfo', () => {
     const info = getPackagesInfo(['com.unknown.pkg']);
     expect(info[0].packageName).toBe('com.unknown.pkg');
     expect(info[0].appLabel).toBe('');
+  });
+});
+
+describe('getPackagesIcons', () => {
+  it('returns data urls for known packages, empty for unknown', () => {
+    expect(typeof cacheAllPackageIcons(96)).toBe('undefined');
+    const arr = JSON.parse(
+      getPackagesIcons(JSON.stringify(['com.tencent.mm', 'com.unknown.pkg']), 96),
+    );
+    expect(arr[0].packageName).toBe('com.tencent.mm');
+    expect(arr[0].icon.startsWith('data:image')).toBe(true);
+    expect(arr[1].icon).toBe('');
   });
 });
 

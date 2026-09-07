@@ -1,6 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App.vue';
+import { queueDiskWrite, resetDiskCacheState } from './lib/diskIconCache';
 
 const mock = vi.hoisted(() => ({
   exec: vi.fn(),
@@ -8,6 +9,7 @@ const mock = vi.hoisted(() => ({
   getPackagesInfo: vi.fn(),
   moduleInfo: vi.fn(),
   toast: vi.fn(),
+  enableEdgeToEdge: vi.fn(),
 }));
 
 vi.mock('kernelsu', () => mock);
@@ -45,6 +47,21 @@ beforeEach(() => {
 });
 
 describe('App.vue', () => {
+  it('requests edge-to-edge so system bars match the theme', async () => {
+    mount(App);
+    await flushPromises();
+    expect(mock.enableEdgeToEdge).toHaveBeenCalledWith(true);
+  });
+
+  it('still boots when the manager lacks edge-to-edge', async () => {
+    mock.enableEdgeToEdge.mockImplementation(() => {
+      throw new TypeError('not implemented');
+    });
+    const wrapper = mount(App);
+    await flushPromises();
+    expect(wrapper.vm.rows).toHaveLength(2);
+  });
+
   it('loads and binds installed packages to rows', async () => {
     const wrapper = mount(App);
     await flushPromises();
@@ -89,6 +106,35 @@ describe('App.vue', () => {
     await flushPromises();
     expect(mock.exec).toHaveBeenCalled();
     expect(mock.toast).toHaveBeenCalled();
+  });
+
+  it('save only writes config, never the icon cache', async () => {
+    const wrapper = mount(App);
+    await flushPromises();
+    mock.exec.mockClear();
+    await wrapper.vm.save();
+    await flushPromises();
+    const iconWrites = mock.exec.mock.calls.filter(([cmd]) => cmd.includes('.cache/icons'));
+    expect(iconWrites).toHaveLength(0);
+  });
+
+  it('flushes queued icon writes on pagehide regardless of visibility state', async () => {
+    resetDiskCacheState();
+    const wrapper = mount(App);
+    await flushPromises();
+    queueDiskWrite(
+      '/data/adb/modules/shade144',
+      'com.example.app',
+      1,
+      'data:image/png;base64,QUJD',
+      mock.exec,
+    );
+    mock.exec.mockClear();
+    window.dispatchEvent(new Event('pagehide'));
+    await flushPromises();
+    const iconWrites = mock.exec.mock.calls.filter(([cmd]) => cmd.includes('.cache/icons'));
+    expect(iconWrites.length).toBeGreaterThan(0);
+    wrapper.unmount();
   });
 
   it('search filters visible rows', async () => {
