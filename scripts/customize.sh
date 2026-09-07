@@ -3,6 +3,11 @@
 # Fixes exec permission on bin/ (reset to 0644 by set_default_perm)
 # and prunes unused ABI dirs. Runs on fresh install AND update.
 # NOTE: do NOT use `exit` here, use `abort` on fatal errors.
+# action.sh stays at 0644 on purpose: managers run it via shell,
+# only bin/ needs the exec bit restored.
+
+[ -n "${MODPATH:-}" ] || abort "! MODPATH not set"
+[ -n "${ARCH:-}" ] || abort "! ARCH not set"
 
 ui_print "- Shade144: fixing binary permissions..."
 
@@ -22,8 +27,10 @@ esac
 if [ -n "$CUR_ABI" ]; then
   for d in "$MODPATH/bin/"*/; do
     [ -d "$d" ] || continue
-    case "$d" in
-      *"$CUR_ABI"*) ;;
+    name="${d%/}"
+    name="${name##*/}"
+    case "$name" in
+      "$CUR_ABI") ;;
       *)
         rm -rf "$d"
         ui_print "- removed unused ABI: $d"
