@@ -143,6 +143,16 @@ else
   chmod 755 "$STAGE/bin/whitelist_updater"
 fi
 
+# WebUI (KernelSU loads $MODPATH/webroot/index.html). Use a production vite
+# build; point WEBROOT_DIR at the built output (e.g. CI artifact).
+WEBROOT_SRC="${WEBROOT_DIR:-dist/webroot}"
+if [[ -d "$WEBROOT_SRC" && -f "$WEBROOT_SRC/index.html" ]]; then
+  cp -a "$WEBROOT_SRC" "$STAGE/webroot"
+  echo "webroot: $WEBROOT_SRC"
+else
+  echo "warn: webroot build not found ($WEBROOT_SRC) - skipping. Build via: (cd webroot && npm ci && npm run build)" >&2
+fi
+
 # Sanity checks
 echo "--- stage contents ---"
 (cd "$STAGE" && find . -type f | sort)

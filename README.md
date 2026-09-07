@@ -22,6 +22,7 @@ Result: apps previously locked to 90Hz can run at 144Hz without a custom kernel 
 ## Features
 
 - 144Hz unlock for hundreds of packages (whitelist in `refresh_rate_config.xml`)
+- Built-in WebUI (KSU/KSUN): edit the per-app whitelist from the root manager, no manual XML editing
 - Idle stays at 60Hz - no extra drain when screen is static
 - Non-destructive patch: only overrides return value, no system refresh rate reconfiguration
 - No custom kernel required
@@ -53,6 +54,9 @@ Result: apps previously locked to 90Hz can run at 144Hz without a custom kernel 
 
 ```
 misc/module.prop                               → module metadata (id, version, description)
+scripts/action.sh                              → whitelist updater (bulk-add installed apps)
+bin/<abi>/whitelist_updater                    → native updater binary
+webroot/                                       → module WebUI (whitelist editor in the manager)
 system/system_ext/framework/magellan_core.jar  → patched jar (dex overlay)
 system/tr_product/etc/vconfig/magellan/refresh_rate_config.xml → package whitelist + modes
 misc/system.prop                               → additional system props (optional)
@@ -133,10 +137,15 @@ cd shade144
 # Edit config
 nano system/tr_product/etc/vconfig/magellan/refresh_rate_config.xml
 
-# Pack flashable zip (root contains misc + system + scripts)
-zip -r shade144-v1.0.0.zip misc system scripts META-INF 2>/dev/null
-# or without META-INF (not required on modern KSU/Magisk):
-zip -r shade144-v1.0.0.zip misc system scripts
+# Test + build WebUI (Vue/Vite, dev mock for KSU icons)
+make -C src test              # C++ whitelist updater unit tests
+(cd webroot && npm install && npm run test && npm run check)
+(cd webroot && npm run build)
+
+# Pack flashable zip (root contains misc + system + scripts + webroot)
+./scripts/release.sh shade144-v1.1.0.zip
+# or let CI do it: push tag v1.1.0 -> Actions cross-compiles binaries,
+# builds webroot, and uploads shade144-v1.1.0.zip to the release
 ```
 
 ## License

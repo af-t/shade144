@@ -9,7 +9,7 @@ build/
 # Scratch prototype (outside repo, but ignore if accidentally created)
 node_modules/
 /package.json
-package-lock.json
+/package-lock.json
 pnpm-lock.yaml
 bun.lockb
 prototype/
