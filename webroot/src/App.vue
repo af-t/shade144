@@ -394,9 +394,17 @@ defineExpose({
       <label v-for="k in ['auto', 'high', 'max']" :key="k" class="rate-row">
         <span class="rate-label">{{ k }}</span>
         <span class="seg">
+          <span
+            class="seg-thumb"
+            aria-hidden="true"
+            :style="{
+              transform: `translateX(${Math.max(0, RATE_VALUES.indexOf(editing.values[k])) * 100}%)`,
+            }"
+          ></span>
           <button
             v-for="v in RATE_VALUES"
             :key="v"
+            type="button"
             class="seg-opt"
             :class="{ on: editing.values[k] === v }"
             :aria-pressed="editing.values[k] === v"

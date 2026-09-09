@@ -39,28 +39,28 @@
 
   --md-sys-color-primary: #7ad15a;
   --md-sys-color-on-primary: #081406;
-  --md-sys-color-primary-container: #25391e;
+  --md-sys-color-primary-container: #1a2b14;
   --md-sys-color-on-primary-container: #c7efb4;
-  --md-sys-color-secondary-container: #2f353c;
+  --md-sys-color-secondary-container: #1a1d21;
   --md-sys-color-on-secondary-container: #d9e2e9;
-  --md-sys-color-tertiary-container: #653636;
+  --md-sys-color-tertiary-container: #402424;
   --md-sys-color-on-tertiary-container: #ffdad8;
-  --md-sys-color-error-container: #8c1d18;
+  --md-sys-color-error-container: #601410;
   --md-sys-color-on-error-container: #f9dedc;
-  --md-sys-color-background: #141218;
+  --md-sys-color-background: #000000;
   --md-sys-color-on-background: #e6e0e9;
-  --md-sys-color-tonal-surface: #2b2930;
-  --md-sys-color-surface: #141218;
+  --md-sys-color-tonal-surface: #141414;
+  --md-sys-color-surface: #000000;
   --md-sys-color-on-surface: #e6e0e9;
-  --md-sys-color-surface-variant: #49454f;
+  --md-sys-color-surface-variant: #2a2a2a;
   --md-sys-color-on-surface-variant: #cac4d0;
-  --md-sys-color-outline: #938f99;
-  --md-sys-color-outline-variant: #49454f;
-  --md-sys-color-surface-container: #211f26;
-  --md-sys-color-surface-container-low: #1d1b20;
-  --md-sys-color-surface-container-high: #2b2930;
-  --md-sys-color-surface-container-highest: #36343b;
-  --md-sys-color-scrim: rgba(0, 0, 0, 0.55);
+  --md-sys-color-outline: #8a868e;
+  --md-sys-color-outline-variant: #262626;
+  --md-sys-color-surface-container: #101010;
+  --md-sys-color-surface-container-low: #0a0a0a;
+  --md-sys-color-surface-container-high: #1a1a1a;
+  --md-sys-color-surface-container-highest: #232323;
+  --md-sys-color-scrim: rgba(0, 0, 0, 0.7);
 
   --radius-group: 20px;
   --radius-dialog: 28px;
@@ -715,14 +715,30 @@ button {
 }
 
 .seg {
-  display: inline-flex;
-  gap: 4px;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   padding: 4px;
   border-radius: 999px;
   background: var(--md-sys-color-surface-container);
+  isolation: isolate;
+}
+
+.seg-thumb {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc((100% - 8px) / 4);
+  border-radius: 999px;
+  background: var(--md-sys-color-primary-container);
+  transition: transform 0.28s cubic-bezier(0.3, 1.2, 0.4, 1);
+  z-index: 0;
 }
 
 .seg-opt {
+  position: relative;
+  z-index: 1;
   min-width: 44px;
   padding: 8px 12px;
   border: none;
@@ -732,10 +748,17 @@ button {
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
+  transition:
+    color 0.2s ease,
+    transform 0.15s ease;
+}
+
+.seg-opt:active {
+  transform: scale(0.94);
 }
 
 .seg-opt.on {
-  background: var(--md-sys-color-primary-container);
+  background: transparent;
   color: var(--md-sys-color-on-primary-container);
 }
 

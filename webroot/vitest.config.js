@@ -5,6 +5,7 @@ export default defineConfig({
   plugins: [vue()],
   test: {
     environment: 'jsdom',
+    pool: 'vmThreads',
     globals: true,
     include: ['src/**/*.{test,spec}.{js,ts}'],
     coverage: {
