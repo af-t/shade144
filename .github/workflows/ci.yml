@@ -124,7 +124,7 @@ jobs:
           ls -l build/*/whitelist_updater
 
       - name: pack module zip
-        run: WEBROOT_DIR="webroot-dl/webui-build" ./scripts/release.sh "shade144-${GITHUB_REF_NAME}.zip"
+        run: VERSION="${GITHUB_REF_NAME}" WEBROOT_DIR="webroot-dl/webui-build" ./scripts/release.sh "shade144-${GITHUB_REF_NAME}.zip"
 
       - name: publish GitHub release
         uses: softprops/action-gh-release@v2

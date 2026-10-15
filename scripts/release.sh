@@ -15,15 +15,33 @@ fi
 # Parse version fields
 get_prop() { grep -E "^$1=" "$MODULE_PROP" | cut -d= -f2- | tr -d '\r'; }
 MOD_ID="$(get_prop id)"
-MOD_VERSION="$(get_prop version)"
-MOD_VERSIONCODE="$(get_prop versionCode)"
+MOD_VERSION="${VERSION:-$(get_prop version)}"
+MOD_VERSIONCODE="${VERSION_CODE:-$(get_prop versionCode)}"
+
+# If VERSION was overridden (e.g. from git tag / CI) and VERSION_CODE was not given, auto-derive
+if [[ -n "${VERSION:-}" && -z "${VERSION_CODE:-}" ]]; then
+  if [[ "$VERSION" =~ ^v?([0-9]+)\.([0-9]+)(\.([0-9]+))? ]]; then
+    _maj="${BASH_REMATCH[1]}"
+    _min="${BASH_REMATCH[2]}"
+    _pat="${BASH_REMATCH[4]:-0}"
+    MOD_VERSIONCODE="$(( _maj * 100 + _min * 10 + _pat ))"
+  fi
+fi
+
 [[ -z "$MOD_ID" ]] && MOD_ID="shade144"
 [[ -z "$MOD_VERSION" ]] && MOD_VERSION="v0.0.0"
+[[ -z "$MOD_VERSIONCODE" ]] && MOD_VERSIONCODE="0"
 
-OUT_NAME="${1:-${MOD_ID}-${MOD_VERSION}.zip}"
-OUT_DIR="dist"
-mkdir -p "$OUT_DIR"
-OUT_PATH="$OUT_DIR/$OUT_NAME"
+if [[ -n "${1:-}" ]]; then
+  if [[ "$1" = /* ]]; then
+    OUT_PATH="$1"
+  else
+    OUT_PATH="dist/$1"
+  fi
+else
+  OUT_PATH="dist/${MOD_ID}-${MOD_VERSION}.zip"
+fi
+mkdir -p "$(dirname "$OUT_PATH")"
 
 # Resolve absolute output
 if [[ "$OUT_PATH" != /* ]]; then
@@ -96,8 +114,10 @@ trap 'rm -rf "$STAGE"' EXIT
 echo "staging -> $STAGE"
 echo "module: $MOD_ID $MOD_VERSION ($MOD_VERSIONCODE)"
 
-# Module root files
-cp -a misc/module.prop "$STAGE/module.prop"
+# Module root files: write module.prop with resolved version/versionCode
+sed -e "s/^version=.*/version=${MOD_VERSION}/" \
+    -e "s/^versionCode=.*/versionCode=${MOD_VERSIONCODE}/" \
+    misc/module.prop > "$STAGE/module.prop"
 if [[ -f misc/system.prop ]]; then
   cp -a misc/system.prop "$STAGE/system.prop"
 fi
