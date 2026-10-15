@@ -191,9 +191,14 @@ async function resolveIcon() {
   await loadLive();
 }
 
-async function init() {
-  await resolveCached();
-  if (!cancelled) observe();
+function init() {
+  if (cancelled) return;
+  const peeked = peekMemoryIcon(key());
+  if (peeked) {
+    current.value = peeked;
+    recordIconSource('mem');
+  }
+  observe();
 }
 
 onMounted(init);

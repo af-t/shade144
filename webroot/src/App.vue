@@ -67,8 +67,16 @@ const managerLabel = computed(() => {
   return manager.value.ksun ? 'KSUN' : 'KSU';
 });
 
+function updateScrollLock() {
+  if (typeof document === 'undefined') return;
+  const locked = loading.value || !!editing.value;
+  document.documentElement.classList.toggle('locked', locked);
+  document.body.classList.toggle('locked', locked);
+}
+
 async function bootstrap() {
   loading.value = true;
+  updateScrollLock();
   error.value = '';
   try {
     manager.value = await loadManager();
@@ -105,6 +113,7 @@ async function bootstrap() {
     error.value = e.message;
   } finally {
     loading.value = false;
+    updateScrollLock();
   }
 }
 
@@ -125,12 +134,12 @@ function toggle(row) {
 
 function openEditor(row) {
   editing.value = row;
-  document.body.classList.add('locked');
+  updateScrollLock();
 }
 
 function closeEditor() {
   editing.value = null;
-  document.body.classList.remove('locked');
+  updateScrollLock();
 }
 
 async function openSearch() {
@@ -216,6 +225,7 @@ function onPageHide() {
 }
 
 onMounted(() => {
+  updateScrollLock();
   try {
     enableEdgeToEdge(true);
   } catch {}
@@ -235,6 +245,10 @@ onUnmounted(() => {
   if (flushTimer) clearInterval(flushTimer);
   flushTimer = null;
   void flushDiskWrites();
+  if (typeof document !== 'undefined') {
+    document.documentElement.classList.remove('locked');
+    document.body.classList.remove('locked');
+  }
 });
 
 defineExpose({
@@ -257,6 +271,8 @@ defineExpose({
 </script>
 
 <template>
+  <div v-if="loading" class="loading"><div class="spinner"></div></div>
+
   <header class="header" :class="{ scroll: scrolled }">
     <div id="title" class="search-hide" :class="{ hide: searchOpen }">Shade144</div>
     <div class="spacer"></div>
@@ -289,10 +305,9 @@ defineExpose({
     <div v-if="MOCK_MODE" class="banner mock">Mock mode — KSU API di-emulasi oleh browser shim</div>
     <div v-if="error" class="banner error">{{ error }}</div>
 
-    <div v-if="loading" class="loading"><div class="spinner"></div></div>
-    <div v-else-if="filtered.length === 0" class="hint">No apps match.</div>
+    <div v-if="!loading && filtered.length === 0" class="hint">No apps match.</div>
 
-    <ul v-else class="list">
+    <ul v-else-if="!loading" class="list">
       <li
         v-for="row in filtered"
         :key="row.package"

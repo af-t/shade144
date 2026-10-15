@@ -77,8 +77,16 @@ body {
   -webkit-touch-callout: none;
 }
 
+html.locked,
 body.locked {
   overflow: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html.locked::-webkit-scrollbar,
+body.locked::-webkit-scrollbar {
+  display: none;
 }
 
 button {
@@ -207,11 +215,17 @@ button {
 }
 
 .loading {
-  height: calc(100vh - var(--top-inset) - 64px - 8px);
-  width: 100%;
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
+  background-color: var(--md-sys-color-surface);
+  z-index: 50;
+  overflow: hidden;
+  touch-action: none;
 }
 
 .spinner {
@@ -455,11 +469,12 @@ button {
   gap: 8px;
   height: 56px;
   padding: 0 20px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.25);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(5px) saturate(180%);
-  -webkit-backdrop-filter: blur(5px) saturate(180%);
+  background: rgba(30, 30, 34, 0.78);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  transform: translateZ(0);
   color: #fff;
   font-size: 14px;
   font-weight: 500;

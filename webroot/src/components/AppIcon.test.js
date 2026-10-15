@@ -76,6 +76,30 @@ describe('AppIcon', () => {
     expect(mem.setCachedIcon).toHaveBeenCalledWith('com.example.app@42', CACHED);
   });
 
+  it('defers disk icon read until intersection occurs', async () => {
+    let observerCb = null;
+    const observe = vi.fn();
+    const disconnect = vi.fn();
+    function FakeObserver(cb) {
+      observerCb = cb;
+      return { observe, disconnect };
+    }
+    vi.stubGlobal('IntersectionObserver', FakeObserver);
+    try {
+      disk.readDiskIcon.mockResolvedValue(CACHED);
+      const wrapper = mountIcon();
+      await flushPromises();
+      expect(disk.readDiskIcon).not.toHaveBeenCalled();
+      expect(wrapper.find('img').exists()).toBe(false);
+      observerCb([{ isIntersecting: true }]);
+      await flushPromises();
+      expect(disk.readDiskIcon).toHaveBeenCalledWith(MODDIR, 'com.example.app', 42, ksu.exec);
+      expect(wrapper.get('img').attributes('src')).toBe(CACHED);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('lazy-loads the live icon only after intersection (top-app-first)', async () => {
     let observerCb = null;
     const observe = vi.fn();

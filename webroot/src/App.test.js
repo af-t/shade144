@@ -53,6 +53,32 @@ describe('App.vue', () => {
     expect(mock.enableEdgeToEdge).toHaveBeenCalledWith(true);
   });
 
+  it('locks scrolling and renders loading overlay during bootstrap, unlocks when finished', async () => {
+    let resolveExec;
+    mock.exec.mockImplementation((cmd) => {
+      if (cmd.startsWith('cat ')) {
+        return new Promise((resolve) => {
+          resolveExec = () => resolve({ errno: 0, stdout: XML, stderr: '' });
+        });
+      }
+      return Promise.resolve({ errno: 0, stdout: '', stderr: '' });
+    });
+    const wrapper = mount(App);
+    expect(wrapper.find('.loading').exists()).toBe(true);
+    expect(document.body.classList.contains('locked')).toBe(true);
+    expect(document.documentElement.classList.contains('locked')).toBe(true);
+
+    for (let i = 0; i < 20 && !resolveExec; i++) {
+      await Promise.resolve();
+    }
+
+    resolveExec?.();
+    await flushPromises();
+    expect(wrapper.find('.loading').exists()).toBe(false);
+    expect(document.body.classList.contains('locked')).toBe(false);
+    expect(document.documentElement.classList.contains('locked')).toBe(false);
+  });
+
   it('still boots when the manager lacks edge-to-edge', async () => {
     mock.enableEdgeToEdge.mockImplementation(() => {
       throw new TypeError('not implemented');

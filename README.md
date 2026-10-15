@@ -2,7 +2,7 @@
 
 > Magellan dex patch to unlock 144Hz on Transsion XOS 16. Idle stays at 60Hz, unlocked apps run at 144Hz.
 
-Modern systemless module compatible with all current root managers. One zip, flash anywhere.
+Modern systemless module for Transsion XOS 16. One zip, flash anywhere.
 
 ---
 
@@ -28,25 +28,12 @@ Result: apps previously locked to 90Hz can run at 144Hz without a custom kernel 
 - No custom kernel required
 - Systemless - safe for OTA (disable module before OTA)
 
-## Root Manager Compatibility
-
-| Manager | Status | Notes |
-|---------|--------|-------|
-| **KernelSU (KSU)** | ✅ Compatible | Use latest KSU build for Android 16 / kernel 6.12.x |
-| **KernelSU Next (KSUN)** | ✅ Compatible | Active community fork of KSU |
-| **SukiSU** | ✅ Compatible | SukiSU Ultra |
-| **ReSukiSU** | ✅ Compatible | SukiSU rebase |
-| **Magisk** | ⚠️ Untested | Requires v30+ or Alpha for Android 16 / kernel 6.12.x; not yet verified with this module |
-| **APatch** | ✅ Compatible | Requires APatch build with Android 16 / 6.12.x support |
-
-> All managers above use the Magisk module format (`module.prop` + `system/` overlay). Any manager that supports systemless `system` mounts will work. KSU-family managers are the primary target for this device.
-
 **Target device:** Transsion XOS 16 on Android 16, kernel 6.12.x (Infinix / Tecno / itel) with `system_ext/framework/magellan_core.jar`. Not applicable to AOSP / HyperOS / OneUI without Magellan.
 
 ## Requirements
 
-- XOS 16 on Android 16, kernel 6.12.x
-- One of the root managers above installed and active with Android 16 support
+- HIOS/XOS 16 on Android 16
+- Root access with Android 16 support (KernelSU / KSUN recommended for WebUI)
 - `magellan_core.jar` present at `/system_ext/framework/`
 - Panel that actually supports 144Hz (check Settings > Display)
 
